@@ -462,9 +462,10 @@ html, body {
 }
 
 .verb-practice {
+  padding: 10%;
   max-width: 100%;
   width: 100%;
-  padding-top: 5%;
+  padding-top: 10%;
   box-sizing: border-box;
   text-align: center;
   background-color: #021925;
