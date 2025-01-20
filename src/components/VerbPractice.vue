@@ -1,7 +1,31 @@
 <template>
   <div class="verb-practice">
+    <!-- SVG kör számláló -->
+    <div class="progress-container">
+      <svg width="100" height="100" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="45" fill="none" stroke="#ddd" stroke-width="3" />
+        <circle
+          cx="50"
+          cy="50"
+          r="45"
+          fill="none"
+          stroke="#4caf50"
+          stroke-width="3"
+          stroke-dasharray="282.6"
+          :stroke-dashoffset="circleDashOffset"
+        />
+        <text x="50%" y="50%" text-anchor="middle" stroke="#51c4d3" stroke-width="1px" dy=".3em" font-size="16">
+          {{ currentRoundQuestionIndex }}
+        </text>
+      </svg>
+    </div>
+
     <h1>Német igék gyakorlása</h1>
-    <p id="kerdes">Kérdés: <strong :style="{ color: '#009cde' }">{{ currentQuestion.verb }}</strong> (Add meg a segédigét és a múlt idejű alakot!)</p>    <input
+    <p id="kerdes">
+      Kérdés: <strong :style="{ color: '#009cde' }">{{ currentQuestion.verb }}</strong><br>
+      (Add meg a segédigét és a múlt idejű alakot!)
+    </p>
+    <input
       type="text"
       v-model="userAnswer"
       placeholder="Írd be a választ (pl. ist gegangen)"
@@ -10,15 +34,39 @@
       @keyup.enter="checkAnswer"
     />
     <button @click="checkAnswer" :disabled="isAnswered || !userAnswer.trim()">Ellenőrzés</button>
-    <button @click="resetGame" class="reset-button">Nullázás és újrakezdés</button>
-    <p v-if="feedback">{{ feedback }}</p>
-    <button id="nextq" @click="nextQuestion" v-if="feedback && unansweredVerbs.length > 0">Következő kérdés</button>
+    <p 
+  v-if="feedback" 
+  :style="{ color: isCorrect ? 'green' : 'red' }"
+>
+  {{ feedback }}
+</p>
 
-    <!-- Statisztika megjelenítése -->
-    <div class="statistics">
-  <p class="correct-answers" :style="{ color: correctAnswers > 0 ? 'green' : '' }">{{ correctAnswers }}</p>
-  <p class="incorrect-answers" :style="{ color: incorrectAnswers > 0 ? 'red' : '' }">{{ incorrectAnswers }}</p>
-</div>
+     <!-- Popup ablak a statisztikához -->
+     <div v-if="showStatistics" class="popup">
+      <div class="popup-content">
+        <h2>Statisztika</h2>
+        <p>Helyes válaszok: {{ correctAnswers }}</p>
+        <p>Helytelen válaszok: {{ incorrectAnswers }}</p>
+        
+        <h3>Részletes válaszok:</h3>
+        <ul>
+          <li 
+            v-for="(verb, index) in solvedVerbs" 
+            :key="index"
+            :style="{ color: verb.isCorrect ? 'green' : 'red' }"
+          >
+            {{ verb.verb }} - 
+            <span :style="{ color: verb.isCorrect ? 'green' : 'red' }">
+              Te válaszod: {{ verb.userAnswer }} 
+            </span> 
+            - {{ verb.isCorrect ? 'Helyes' : 'Helytelen' }}
+          </li>
+        </ul>
+
+        <button @click="continueGame" :disabled="incorrectAnswers > 0">Folytatás</button>
+        <button @click="resetGame">Újrakezdés ugyanazokkal az igékkel</button>
+      </div>
+    </div>
 
     <!-- Kép mindig megjelenik, ha nincs válasz -->
     <div class="image-container">
@@ -31,13 +79,11 @@
         v-if="isCorrect === true"
         src="https://hips.hearstapps.com/hmg-prod/images/dwayne-johnson-attends-the-jumanji-the-next-level-uk-film-news-photo-1575726701.jpg?resize=640:*"
         alt="Helyes válasz"
-        v-show="isAnswered"
       />
       <img
         v-if="isCorrect === false"
         src="https://variety.com/wp-content/uploads/2020/12/Dwayne_Johnson.png?w=970&h=563&crop=1"
         alt="Helytelen válasz"
-        v-show="isAnswered"
       />
     </div>
   </div>
@@ -344,7 +390,7 @@ export default {
   { verb: "vorkommen", auxiliary: "ist", pastParticiple: "vorgekommen" },
   { verb: "vorlesen", auxiliary: "hat", pastParticiple: "vorgelesen" },
   { verb: "vorschlagen", auxiliary: "hat", pastParticiple: "vorgeschlagen" },
-  { verb: "vortragen", auxiliary: "hat", pastParticiple: "vgetragen" },
+  { verb: "vortragen", auxiliary: "hat", pastParticiple: "vorgetragen" },
   { verb: "vorziehen", auxiliary: "hat", pastParticiple: "vorgezogen" },
   { verb: "wahrnehmen", auxiliary: "hat", pastParticiple: "wahrgenommen" },
   { verb: "wegschmeißen", auxiliary: "hat", pastParticiple: "weggeschmissen" },
@@ -377,79 +423,149 @@ export default {
 
       ],
       unansweredVerbs: [],
-      solvedVerbs: [],
-      currentQuestion: {},
-      userAnswer: "",
-      feedback: "",
-      correctAnswers: 0,
-      incorrectAnswers: 0,
-      isAnswered: false,
-      isCorrect: null,
-    };
+    solvedVerbs: [],
+    currentQuestion: {},
+    userAnswer: "",
+    feedback: "",
+    correctAnswers: 0,
+    incorrectAnswers: 0,
+    isAnswered: false,
+    isCorrect: null,
+    answersGiven: 0,
+    showStatistics: false,
+    totalVerbs: 0,
+    answeredQuestions: 0,
+    currentRoundQuestionIndex: 1, // Hányadik kérdésnél tartunk
+    roundDetails: [], // Az adott kör részletes statisztikái
+    currentRoundVerbs: [], // Új: az aktuális kör igéi
+  };
+  },
+  computed: {
+    // Számítja a stroke-dashoffset-et, hogy a kitöltött kör megfelelően változzon
+    circleDashOffset() {
+      const progress = (this.currentRoundQuestionIndex / 10) * 282.6;
+      return 282.6 - progress;
+    },
   },
   created() {
     this.resetUnansweredVerbs();
+    this.totalVerbs = this.verbs.length;
     this.setRandomQuestion();
   },
   methods: {
-    resetUnansweredVerbs() {
-      this.unansweredVerbs = [...this.verbs];
-      this.solvedVerbs = [];
-      this.correctAnswers = 0;
-      this.incorrectAnswers = 0;
-      this.feedback = "";
-      this.userAnswer = "";
-      this.isAnswered = false;
-      this.isCorrect = null;
-    },
-    resetGame() {
-      this.resetUnansweredVerbs();
-      this.setRandomQuestion();
-    },
-    setRandomQuestion() {
-      if (this.unansweredVerbs.length === 0) {
-        this.feedback = "Minden igét megoldottál! Gratulálok!";
-        this.isAnswered = true;
-        return;
+    shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
       }
-      const randomIndex = Math.floor(Math.random() * this.unansweredVerbs.length);
-      this.currentQuestion = this.unansweredVerbs.splice(randomIndex, 1)[0];
-      this.userAnswer = "";
-      this.feedback = "";
-      this.isAnswered = false;
-      this.isCorrect = null;
+      return array;
     },
+
     checkAnswer() {
-      if (!this.userAnswer.trim()) {
-        this.feedback = "Kérlek, add meg a választ!";
-        return;
-      }
+  if (!this.userAnswer.trim()) {
+    this.feedback = "Kérlek, add meg a választ!";
+    return;
+  }
 
-      const correctAnswer = `${this.currentQuestion.auxiliary} ${this.currentQuestion.pastParticiple}`;
+  const correctAnswer = `${this.currentQuestion.auxiliary} ${this.currentQuestion.pastParticiple}`;
+  const isCorrect = this.userAnswer.trim().toLowerCase() === correctAnswer.toLowerCase();
 
-      if (this.userAnswer.trim().toLowerCase() === correctAnswer.toLowerCase()) {
-        this.feedback = "Helyes!";
-        this.correctAnswers++;
-        this.isCorrect = true;
-        this.solvedVerbs.push(this.currentQuestion);
-      } else {
-        this.feedback = `Helytelen! A helyes válasz: ${correctAnswer}`;
-        this.incorrectAnswers++;
-        this.isCorrect = false;
-      }
+  this.feedback = isCorrect 
+    ? "Helyes!" 
+    : `Helytelen! A helyes válasz: ${correctAnswer}`;
+  this.isCorrect = isCorrect; 
+  this.isAnswered = true; 
+  if (isCorrect) {
+    this.correctAnswers++;
+  } else {
+    this.incorrectAnswers++;
+  }
 
-      this.isAnswered = true;
-      // 3 másodperc után automatikusan új kérdés
-      setTimeout(() => {
-        this.setRandomQuestion();
-      }, 3000); // 3000 ms = 3 másodperc
-    },
+  // Hozzáadás a solvedVerbs tömbhöz
+  this.solvedVerbs.push({
+    verb: `${this.currentQuestion.auxiliary} ${this.currentQuestion.pastParticiple}`,
+    userAnswer: this.userAnswer.trim(),
+    isCorrect: isCorrect,
+  });
+
+  this.isAnswered = true;
+  this.answersGiven++;
+  this.answeredQuestions++;
+
+  if (this.answersGiven >= 2) {
+    this.showStatistics = true;
+  } else {
+    setTimeout(() => {
+      this.nextQuestion();
+    }, 3000);
+  }
+},
+
     nextQuestion() {
-      this.setRandomQuestion();
+      if (this.unansweredVerbs.length > 0) {
+        this.currentQuestion = this.unansweredVerbs.pop();
+        this.userAnswer = "";
+        this.feedback = "";
+        this.isAnswered = false;
+        this.isCorrect = null;
+        this.currentRoundQuestionIndex++;
+      } else {
+        this.feedback = "Nincs több kérdés!";
+      }
     },
+
+    resetUnansweredVerbs() {
+    // Az új körre mindig véletlenszerű sorrendben kapott igéket készít elő
+    this.unansweredVerbs = this.shuffleArray([...this.verbs]);
+    this.currentRoundVerbs = [...this.unansweredVerbs]; // Eltároljuk az aktuális kör igéit
+  },
+
+  resetGame() {
+  this.answersGiven = 0;
+  this.correctAnswers = 0;
+  this.incorrectAnswers = 0;
+  this.showStatistics = false;
+  this.isAnswered = false;
+  this.userAnswer = "";
+  this.answeredQuestions = 0;
+  this.currentRoundQuestionIndex = 1;
+
+  // Az újraindításkor a previous round igéit használjuk
+  // Az unansweredVerbs-t ne keverjük újra, hanem használjuk az aktuális kör igéit
+  this.unansweredVerbs = [...this.currentRoundVerbs]; // Ugyanazokkal az igékkel indítjuk újra
+  this.setRandomQuestion(); // Beállítjuk az első kérdést
+  this.feedback = "";
+  this.isCorrect = null;
+  this.roundDetails = []; // Előző kör statisztikáinak törlése
+
+  // Állapotok törlése (ha szükséges)
+  this.solvedVerbs = [];
+},
+
+    continueGame() {
+      if (this.incorrectAnswers === 0) {
+        this.answersGiven = 0;
+        this.showStatistics = false;
+        this.setRandomQuestion();
+      } else {
+        this.feedback = "Csak akkor folytathatod, ha minden válasz helyes!";
+      }
+    },
+
+    setRandomQuestion() {
+  // Az igék sorrendje a `unansweredVerbs` alapján történik
+  if (this.unansweredVerbs.length > 0) {
+    this.currentQuestion = this.unansweredVerbs.pop();  // Az első kérdés az unansweredVerbs tömbből
+  } else {
+    this.feedback = "Nincs több kérdés!";
+  }
+},
+
+
   },
 };
 </script>
+
 
 <style scoped>
 html, body {
@@ -468,8 +584,8 @@ html, body {
   padding-top: 10%;
   box-sizing: border-box;
   text-align: center;
-  background-color: #021925;
-  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+  background-color: #000000;
+  /* box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1); */
   color: white;
   overflow: hidden;
 }
@@ -479,15 +595,15 @@ h1 {
 }
 
 
-input, button {
-  width: 300px;
+input, button, .counters {
+  width: 350px;
   margin: 10px auto; /* Középre igazítja a gombokat */
   padding: 8px;
   font-size: 16px;
-  border-radius: 30px;
+  border-radius: 15px;
   box-sizing: border-box;
   display: inline-block;
-  box-shadow: #000000 4px 4px 0 0;
+  /*box-shadow: #000000 4px 4px 0 0; */
   cursor: pointer;
 }
 
@@ -500,8 +616,13 @@ button {
   color: white;
   border: none;
   cursor: pointer;
-  display: block; /* A gombok mindig egymás alatt lesznek */
-
+  display: block; /* Inline-blokk elemek */
+  margin: 10px auto; /* Középre igazítás */
+  padding: 8px;
+  font-size: 16px;
+  border-radius: 15px;
+  box-sizing: border-box;
+  /* box-shadow: #000000 4px 4px 0 0; */
 }
 
 #nextq {
@@ -513,7 +634,7 @@ button {
 }
 
 button:hover {
-  background-color: #021925;
+  background-color: #186a0d;
   transition: all 175ms cubic-bezier(0, 0, 1, 1);
 
 }
@@ -535,17 +656,14 @@ button:disabled {
 }
 
 img {
-  max-width: 300px;
+  max-width: 350px;
   height: auto;
-  border-radius: 30px;
-  box-shadow: #000000 4px 4px 0 0;
+  border-radius: 15px;
+  /* box-shadow: #000000 4px 4px 0 0; */
   margin-bottom: 50px;
 
 }
 
-.reset-button {
-  background-color: #ecaf07;
-}
 .reset-button:hover {
   background-color: #886400;
   transition: all 175ms cubic-bezier(0, 0, 1, 1);
@@ -555,13 +673,111 @@ img {
   margin-top: 20px;
   font-size: 16px;
   font-weight: bold;
-  display: flex; /* Flexbox használata */
+  display: block; /* Flexbox használata */
   justify-content: center; /* Középre igazítás */
   gap: 20px; /* Különbség a számok között */
 }
 
 .correct-answers,
 .incorrect-answers {
-  font-size: 54px; /* Nagyobb méret a számoknak */
+  font-size: 16px; /* Nagyobb méret a számoknak */
 }
+
+.continue-button {
+  background-color: #000000;
+  color: white;
+  border: none;
+  border-radius: 15px;
+  cursor: pointer;
+  font-size: 16px;
+
+}
+
+.reset-button {
+  background-color: #ecaf07;
+}
+
+.continue-button:hover,
+.reset-button:hover {
+  opacity: 0.9;
+}
+
+.button-container {
+  flex-direction: row-reverse;
+  display: flex; /* Flexbox aktiválása a gombok egymás mellé helyezéséhez */
+  justify-content: space-between; /* Gombok közötti távolság */
+  width: 350px; /* Azonos szélesség, mint az input mező */
+  margin: 0 auto; /* Középre igazítás */
+  margin-top: 20px; /* Távolság a tartalom felett */
+  box-sizing: border-box; /* Padding és border beleszámít a szélességbe */
+  gap: 10px;
+}
+
+.continue-button,
+.reset-button {
+  width: 48%; /* Gombok szélessége a tartály méretének ~fele */
+  padding: 10px; /* Gombok belső térköze */
+  font-size: 16px; /* Szövegméret */
+  text-align: center; /* Szöveg középre igazítása */
+
+}
+
+.continue-button {
+  background-color: #28c114;
+}
+
+.counters {
+  background-color: #131313;
+  display: flex;
+  border-radius: 15px;
+  justify-content: center; /* Középre igazítás */
+  gap: 1rem; /* Távolság a számlálók között */
+  align-items: center; /* Függőleges igazítás */
+}
+
+.popup {
+  position: fixed;
+  width: 350px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #009cde;
+  border-radius: 15px;
+  padding: 20px;
+  border: 0px solid #ccc;
+  /* box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); */
+  z-index: 1000;
+}
+
+.popup-content {
+  text-align: center;
+}
+
+.progress-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 20px;
+}
+
+svg {
+}
+
+circle {
+  transition: stroke-dashoffset 0.3s ease;
+}
+
+p {
+  font-size: 16px;
+  font-weight: bold;
+  margin-top: 10px;
+}
+
+text {
+  font-size: 30px;
+  fill: #009cde;
+  font-weight: bold;
+}
+
 </style>
