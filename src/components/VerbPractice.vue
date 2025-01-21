@@ -43,14 +43,12 @@
   {{ feedback }}
 </p>
 
-     <!-- Popup ablak a statisztikához -->
-     <div v-if="showStatistics" class="popup">
-      <div class="popup-content">
-        <h2>Statisztika</h2>
-        <p>Helyes válaszok: {{ correctAnswers }}</p>
-        <p>Helytelen válaszok: {{ incorrectAnswers }}</p>
-        
-        <h3>Részletes válaszok:</h3>
+<!-- Popup ablak a statisztikához -->
+<div v-if="showStatistics" class="popup-overlay">
+  <div class="popup-content">
+    <h2>Statisztika</h2>
+    <p style="margin-bottom: 5px;">Helyes válaszok: {{ correctAnswers }}</p>
+    <p style="margin-top: 5px; margin-bottom: 5px;">Helytelen válaszok: {{ incorrectAnswers }}</p>
     <ul>
       <li v-for="(verb, index) in solvedVerbs" :key="index" :style="{ color: verb.isCorrect ? 'green' : 'red' }">
         {{ verb.verb }} - 
@@ -63,10 +61,10 @@
       </li>
     </ul>
 
-        <button @click="continueGame" :disabled="incorrectAnswers > 0">Folytatás</button>
-        <button id="resetbutton"  @click="resetGame">Újrakezdés ugyanazokkal az igékkel</button>
-      </div>
-    </div>
+    <button @click="continueGame" :disabled="incorrectAnswers > 0">Folytatás</button>
+    <button id="resetbutton" @click="resetGame">Újrakezdés ugyanazokkal az igékkel</button>
+  </div>
+</div>
 
     
   </div>
@@ -755,6 +753,7 @@ img {
 
 .popup-content {
   text-align: center;
+  line-height: 1em;
 }
 
 .progress-container {
@@ -775,7 +774,7 @@ circle {
 p {
   font-size: 16px;
   font-weight: bold;
-  line-height: 1.7em;
+  line-height: 1.5em;
   margin-top: 10px;
 }
 
@@ -801,5 +800,31 @@ text {
 ul {
   list-style-type: none;
   text-align: left;
+  font-size: 14px;
 }
+
+/* A popup háttér elmosása */
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5); /* Áttetsző sötét háttér */
+  backdrop-filter: blur(5px); /* A blur effekt */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999; /* A popupot a többi elem fölé helyezi */
+}
+
+/* A popup ablak stílusai */
+.popup-content {
+  background-color:#009cde;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  text-align: center;
+}
+
 </style>
