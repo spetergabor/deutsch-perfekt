@@ -14,7 +14,7 @@
           stroke-dasharray="282.6"
           :stroke-dashoffset="circleDashOffset"
         />
-        <text x="50%" y="50%" text-anchor="middle" stroke="#51c4d3" stroke-width="1px" dy=".3em" font-size="16">
+        <text x="50%" y="50%" text-anchor="middle" stroke-width="1px" dy=".3em" font-size="16">
           {{ currentRoundQuestionIndex }}
         </text>
       </svg>
@@ -35,8 +35,9 @@
     />
     <button @click="checkAnswer" :disabled="isAnswered || !userAnswer.trim()">Ellenőrzés</button>
     <p 
+  class="feedbackbox" 
   v-if="feedback" 
-  :style="{ color: isCorrect ? 'green' : 'red' }"
+  :style="{ backgroundColor: isCorrect ? '#28c114' : '#ff4d4d', color: 'white' }"
 >
   {{ feedback }}
 </p>
@@ -68,24 +69,7 @@
       </div>
     </div>
 
-    <!-- Kép mindig megjelenik, ha nincs válasz -->
-    <div class="image-container">
-      <img
-        v-if="!isAnswered"
-        src="https://static1.srcdn.com/wordpress/wp-content/uploads/2019/09/The-Rock-Raises-The-Peoples-Eyebrow.jpg?q=50&fit=crop&w=1140&h=&dpr=1.5"
-        alt="Válaszra vár"
-      />
-      <img
-        v-if="isCorrect === true"
-        src="https://hips.hearstapps.com/hmg-prod/images/dwayne-johnson-attends-the-jumanji-the-next-level-uk-film-news-photo-1575726701.jpg?resize=640:*"
-        alt="Helyes válasz"
-      />
-      <img
-        v-if="isCorrect === false"
-        src="https://variety.com/wp-content/uploads/2020/12/Dwayne_Johnson.png?w=970&h=563&crop=1"
-        alt="Helytelen válasz"
-      />
-    </div>
+    
   </div>
 </template>
 
@@ -468,29 +452,20 @@ export default {
   }
 
   const correctAnswer = `${this.currentQuestion.auxiliary} ${this.currentQuestion.pastParticiple}`;
-  const isCorrect = this.userAnswer.trim().toLowerCase() === correctAnswer.toLowerCase();
+  this.isCorrect = this.userAnswer.trim().toLowerCase() === correctAnswer.toLowerCase();
 
-  this.feedback = isCorrect 
-    ? "Helyes!" 
+  this.feedback = this.isCorrect
+    ? "Helyes!"
     : `Helytelen! A helyes válasz: ${correctAnswer}`;
-  this.isCorrect = isCorrect; 
-  this.isAnswered = true; 
-  if (isCorrect) {
+
+  if (this.isCorrect) {
     this.correctAnswers++;
   } else {
     this.incorrectAnswers++;
   }
 
-  // Hozzáadás a solvedVerbs tömbhöz
-  this.solvedVerbs.push({
-    verb: `${this.currentQuestion.auxiliary} ${this.currentQuestion.pastParticiple}`,
-    userAnswer: this.userAnswer.trim(),
-    isCorrect: isCorrect,
-  });
-
   this.isAnswered = true;
   this.answersGiven++;
-  this.answeredQuestions++;
 
   if (this.answersGiven >= 10) {
     this.showStatistics = true;
@@ -578,14 +553,13 @@ html, body {
 }
 
 .verb-practice {
-  padding: 10%;
   max-width: 100%;
+  padding-top: 5%;
   width: 100%;
-  padding-top: 10%;
+  height: 100vh;
   box-sizing: border-box;
   text-align: center;
-  background-color: #000000;
-  /* box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1); */
+  background-image: linear-gradient(to right top, #051937, #171228, #190a1a, #12040d, #000000);  /* box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1); */
   color: white;
   overflow: hidden;
 }
@@ -775,9 +749,21 @@ p {
 }
 
 text {
-  font-size: 30px;
-  fill: #009cde;
+  font-size: 36px;
+  fill: #ffffff;
   font-weight: bold;
 }
 
+.feedbackbox {
+  display: flex;
+  justify-content: center; /* Horizontális középre igazítás */
+  align-items: center;    /* Vertikális középre igazítás */
+  width: 350px;
+  height: auto;           /* Magasság automatikus (ha szöveg változó) */
+  padding: 30px 0px 30px 0px;
+  border-radius: 15px;
+  text-align: center;     /* Szöveg igazítása középre */
+  margin: 0 auto;         /* Középre helyezés az oldal közepén */
+  margin-top: 20px;
+}
 </style>
