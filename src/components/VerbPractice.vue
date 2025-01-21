@@ -492,7 +492,7 @@ export default {
   this.answersGiven++;
   this.answeredQuestions++;
 
-  if (this.answersGiven >= 2) {
+  if (this.answersGiven >= 10) {
     this.showStatistics = true;
   } else {
     setTimeout(() => {
